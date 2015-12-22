@@ -51,7 +51,7 @@ public class TrainLambdaMART {
 	public static void test_rank() throws IOException{
 		Search.initialize();
 		
-		String modelFile = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\mymodel.txt";
+		String modelFile = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\mymodel-50.txt";
 		String[] rType = new String[]{"MART", "RankNet", "RankBoost", "AdaRank", "Coordinate Ascent", "LambdaRank", "LambdaMART", "ListNet", "Random Forests", "Linear Regression"};
 		RANKER_TYPE[] rType2 = new RANKER_TYPE[]{RANKER_TYPE.MART, RANKER_TYPE.RANKNET, RANKER_TYPE.RANKBOOST, RANKER_TYPE.ADARANK, RANKER_TYPE.COOR_ASCENT, RANKER_TYPE.LAMBDARANK, RANKER_TYPE.LAMBDAMART, RANKER_TYPE.LISTNET, RANKER_TYPE.RANDOM_FOREST, RANKER_TYPE.LINEAR_REGRESSION};
 		int rankerType = 6;
@@ -60,11 +60,12 @@ public class TrainLambdaMART {
 		e = new Evaluator(rType2[rankerType], trainMetric, testMetric);
 		ranker = rFact.loadRankerFromFile(modelFile);
 		features = ranker.getFeatures();
+		System.out.println("Model loaded");
 		
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
 		Test.loadTestQuerys(queryNums, querys);
-		
+		System.out.println("Querys loaded");
 		
 		for (int qi=80; qi<100; qi++){
 			long t1 = new Date().getTime();
@@ -174,23 +175,39 @@ public class TrainLambdaMART {
 	
 
 	public static void rank(int queryID, ArrayList<DocScoreList> scores) throws IOException{
-		String testFile = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\features_one_query.txt" + queryID;
 		String indriRanking = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\ranks_one_query.txt" + queryID;
-		/*
-		writeFeatures(queryID, scores, testFile);
-		rank(testFile, indriRanking);
-		*/
-		int[] rankIndex = new int[scores.size()];
-		rank(toRankList(queryID, scores), rankIndex);
+		
+		double[] newScores = new double[scores.size()];
+		RankList l = toRankList(queryID, scores);
+		int[] rankIndex = rank(l, newScores);
+		writeRankResult(l, indriRanking, newScores, rankIndex);
+		
 	}
 	
-	public static void rank(RankList l, int[] rankIndex){
-		
-		double[] scores = new double[l.size()];
+	public static int[] rank(RankList l, double[] scores){
+		//double[] scores = new double[l.size()];
 		for (int j = 0; j < l.size(); j++)
 			scores[j] = ranker.eval(l.get(j));
-		rankIndex = MergeSorter.sort(scores, false);
-		
+		int[] rankIndex = MergeSorter.sort(scores, false);
+		return rankIndex;
+	}
+	
+	public static void writeRankResult(RankList l, String outputFileName, double[] scores, int[] idx){
+		try {
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFileName), "UTF-8"));
+			
+			for (int j = 0; j < idx.length; j++) {
+				int k = idx[j];
+				String str = l.getID() + " Q0 " + l.get(k).getDescription().replace("#", "").trim() + " " + (j + 1) + " " + SimpleMath.round(scores[k], 5) + " indri";
+				out.write(str);
+				out.newLine();
+			}
+			out.close();
+		}
+		catch(IOException ex)
+		{
+			throw RankLibError.create("Error in writeRankResult: ", ex);
+		}
 	}
 	
 	public static RankList toRankList(int queryID, ArrayList<DocScoreList> scores){
@@ -205,8 +222,8 @@ public class TrainLambdaMART {
 	
 	public static DataPoint toDataPoint(int queryID, DocScoreList score){
 		int featureNumber = score.scores.size();
-		float[] fVals = new float[featureNumber];
-		int i = 0;
+		float[] fVals = new float[featureNumber+1];
+		int i = 1;
 		for (Double s: score.scores){
 			fVals[i] = s.floatValue();
 			i ++;
@@ -216,30 +233,5 @@ public class TrainLambdaMART {
 	}
 	
 	
-	public static void rank(String testFile, String indriRanking)
-	{
-		List<RankList> test = e.readInput(testFile);
-		
-		try {
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(indriRanking), "UTF-8"));
-			for (RankList l : test) {
-				double[] scores = new double[l.size()];
-				for (int j = 0; j < l.size(); j++)
-					scores[j] = ranker.eval(l.get(j));
-				int[] idx = MergeSorter.sort(scores, false);
-				for (int j = 0; j < idx.length; j++) {
-					int k = idx[j];
-					String str = l.getID() + " Q0 " + l.get(k).getDescription().replace("#", "").trim() + " " + (j + 1) + " " + SimpleMath.round(scores[k], 5) + " indri";
-					out.write(str);
-					out.newLine();
-				}
-			}
-			out.close();
-		}
-		catch(IOException ex)
-		{
-			throw RankLibError.create("Error in Evaluator::rank(): ", ex);
-		}
-	}
 	
 }
