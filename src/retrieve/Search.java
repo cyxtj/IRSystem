@@ -27,43 +27,30 @@ public class Search {
 	
 	
 	//加载索引器，包括词典，文档的长度和所对应的docNo
-	public static String indexPath;
-	public static String docPath;
+	public String indexPath;
+	public String docPath;
 	
-	public static Dictionary dic;
-	public static int[] docLengths;
-	public static String[] docNoByDocId;
-	public static ArrayList<Double> docVectorLengths;
-	public static ArrayList<Double> docPageRanks;
-	public static ArrayList<Double> docUrlDepths;
+	public Dictionary dic;
+	public String[] docNoByDocId;
+	public Measure M;
 	
-	public static void main(String[] args) throws IOException{
+	public Search() throws IOException{
 		initialize();
-		ArrayList<DocScoreList> docs = SearchFor("Algorithm Design");
-		docs = Rank.rank(docs);
-		for (int i=0; i<10; i++){
-			DocScoreList doc = docs.get(i);
-			System.out.println(docNoByDocId[doc.docid] + ": " + doc.scores.toString());
-			Document docObj = Document.getDocument(docNoByDocId[doc.docid], docPath);
-			System.out.println(docObj.content);
-			String title = docObj.title;
-			System.out.println("-----------------\n---------------------");
-		}
-		System.out.println(docNoByDocId[docs.get(docs.size()-1).docid] + ": " + docs.get(docs.size()-1).scores.toString());
-		// System.out.print(docs.toString());
 	}
 	
-	public static ArrayList<DocScoreList> SearchFor(String query) throws IOException{
+	public ArrayList<DocScoreList> SearchFor(String query) throws IOException{
 		// Given a query, return all possible relevant documents and their scores.
 		ArrayList<TermFreq> queryTermsFreq = new ArrayList<TermFreq>(); // stemming and lemmatization the query
 		ArrayList<PostingList> PLs = new ArrayList<PostingList>(); // all the posting lists
 		retrivePostingLists(query, queryTermsFreq, PLs);
-		return Measure.ComputeScores(queryTermsFreq, PLs);
+		ArrayList<DocScoreList> docsScores = M.ComputeScores(queryTermsFreq, PLs);
+		sort(docsScores);
+		return docsScores;
 	}
 	
 	
 	
-	public static void retrivePostingLists(String query, ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> PLs) throws IOException{
+	public void retrivePostingLists(String query, ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> PLs) throws IOException{
 		HashMap<String, Integer> termFreqDict = new HashMap<String, Integer>(); // count the term frequency while processing
 		MyInteger index = new MyInteger(0);
 		Token token;
@@ -94,21 +81,20 @@ public class Search {
 		}
 	}
 	
-	public static void initialize() throws IOException{
+	public void initialize() throws IOException{
 		indexPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\index";
 		docPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\WT10G\\WT10G_copy";
 		dic = Dictionary.load(
 					new File(indexPath + "/dictionary"), 
 					new File(indexPath + "/postinglist"));
 		System.out.println("Dictionary loaded");
-		docLengths = Document.loadDocLengths(new File(indexPath + "/docLengths"));
 		docNoByDocId = Document.loadDocNoByDocId(new File(indexPath + "/docNoByDocId"));
-		System.out.println("Document information loaded");
-		N = docNoByDocId.length;
-		
-		Measure.initialize(dic, docLengths, docNoByDocId, N);
+		M = new Measure(dic, docNoByDocId);
 	}
 	
-	
+	public void sort(ArrayList<DocScoreList> docsScores){
+		DocScoreListComparator dslc = new DocScoreListComparator();
+		docsScores.sort(dslc);
+	}
 	
 }

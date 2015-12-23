@@ -1,9 +1,11 @@
 package retrieve;
 
 import index.domain.Dictionary;
+import index.domain.Document;
 import index.domain.PostingItem;
 import index.domain.PostingList;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +19,7 @@ import retrieve.util.DocScoreList;
 import retrieve.util.TermFreq;
 
 public class Measure {
-	public static double N;
+	
 	// BM25 parameters
 	public static final double b = 0.75;
 	public static final double k1 = 2;
@@ -25,40 +27,50 @@ public class Measure {
 	public static final double avg_l = 400.63543;
 	
 	
-	public static Dictionary dic;
-	public static int[] docLengths;
-	public static String[] docNoByDocId;
-	public static ArrayList<Double> docVectorLengths;
-	public static ArrayList<Double> docPageRanks;
-	public static ArrayList<Double> docUrlDepths;
+	public Dictionary dic;
+	public int[] docLengths;
+	public String[] docNoByDocId;
+	public ArrayList<Double> docVectorLengths;
+	public ArrayList<Double> docPageRanks;
+	public ArrayList<Double> docUrlDepths;
+	public double N;
 	
+	public Measure(Dictionary dic, String[] docNoByDocId) throws IOException{
+		initialize(dic, docNoByDocId);
+	}
 	
-	public static void initialize(Dictionary dic, int[] docLengths, String[] docNoByDocId, double N) throws IOException{
-		Measure.dic = dic;
-		Measure.docLengths = docLengths;
-		Measure.docNoByDocId = docNoByDocId;
-		Measure.N = N;
+	public void initialize(Dictionary dic, String[] docNoByDocId) throws IOException{
+		this.dic = dic;
+		this.docNoByDocId = docNoByDocId;
+		
 		String indexPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\index";
 		String docPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\WT10G\\WT10G_copy";
+		
+		docLengths = Document.loadDocLengths(new File(indexPath + "/docLengths"));
+		
+		N = docNoByDocId.length;
+		
 		//DocInfo.writeDocWeightLengths(dic, N, "i:\\kuaipan\\graduateCourses\\IR\\program\\Search\\WT10G\\docWeightLength.txt");
 		docVectorLengths = DocInfo.loadDocTfIdfVectorLengths(indexPath+"/docWeightLength.txt");
 		docPageRanks = new ArrayList<Double>();
 		docUrlDepths = new ArrayList<Double>();
 		DocInfo.loadDocPageRank("i:\\kuaipan\\graduateCourses\\IR\\program\\staticScores\\pagerank_in_byid.txt", docPageRanks);
-		DocInfo.loadDocPageRank("i:\\kuaipan\\graduateCourses\\IR\\program\\staticScores\\urldepth_byid.txt", docUrlDepths);
+		DocInfo.loadDocUrlDepth("i:\\kuaipan\\graduateCourses\\IR\\program\\staticScores\\urldepth_byid.txt", docUrlDepths);
+		
+		System.out.println("Document information loaded");
 	}
 	
 	
-	public static ArrayList<DocScoreList> ComputeScores(ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> PLs){
-		HashMap<Integer, Double> bm25 = Measure.ComputeBM25(queryTermsFreq, PLs);
-		HashMap<Integer, Double> vsm = Measure.ComputeVSM(queryTermsFreq, PLs);
-		HashMap<Integer, Double[]> staticScore = Measure.ComputeStaticScores(PLs);
-		ArrayList<DocScoreList> relatedDocidScores = Measure.combineScores(bm25, vsm, staticScore);
+	public ArrayList<DocScoreList> ComputeScores(ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> PLs){
+		HashMap<Integer, Double> bm25 = ComputeBM25(queryTermsFreq, PLs);
+		HashMap<Integer, Double> vsm = ComputeVSM(queryTermsFreq, PLs);
+		HashMap<Integer, Double[]> staticScore = ComputeStaticScores(PLs);
+		ArrayList<DocScoreList> relatedDocidScores = combineScores(bm25, vsm, staticScore);
 		return relatedDocidScores;
 	}
 	
 	
-	public static HashMap<Integer, Double> ComputeVSM(ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> pls){
+	public HashMap<Integer, Double> ComputeVSM(ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> pls){
 		// TODO check the formula
 		
 		HashMap<Integer, double[]> docVectors = new HashMap<Integer, double[]>(); // docid: [term1weight, term2weight, ...]
@@ -98,7 +110,7 @@ public class Measure {
 	}
 	
 
-	public static HashMap<Integer, Double> ComputeBM25(ArrayList<TermFreq> queryTerms, ArrayList<PostingList> PostingLists){
+	public HashMap<Integer, Double> ComputeBM25(ArrayList<TermFreq> queryTerms, ArrayList<PostingList> PostingLists){
 		double qtf = 1;
 		
 		// compute scores for each document
@@ -131,7 +143,7 @@ public class Measure {
 	 * @param PostingLists
 	 * @return
 	 */
-	public static HashMap<Integer, Double[]> ComputeStaticScores(ArrayList<PostingList> PostingLists){
+	public HashMap<Integer, Double[]> ComputeStaticScores(ArrayList<PostingList> PostingLists){
 		
 		HashMap<Integer, Double[]> docScores = new HashMap<Integer, Double[]>();
 		for (int i=0; i<PostingLists.size(); i++){
@@ -155,7 +167,7 @@ public class Measure {
 	
 	
 
-	public static ArrayList<DocScoreList> combineScores(HashMap<Integer, Double> bm25, HashMap<Integer, Double> vsm, HashMap<Integer, Double[]> staticScore){
+	public ArrayList<DocScoreList> combineScores(HashMap<Integer, Double> bm25, HashMap<Integer, Double> vsm, HashMap<Integer, Double[]> staticScore){
 		if (!(bm25.size()==vsm.size() && bm25.size()==staticScore.size())){
 			return null;
 		}

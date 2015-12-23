@@ -38,51 +38,21 @@ public class TrainLambdaMART {
 	
 	public static void main(String[] args) throws NumberFormatException, IOException{
 		// genTrainingData();
-		test_rank();
+		TrainLambdaMART T = new TrainLambdaMART();
+		//T.test_rank();
 	}
 	protected static RankerFactory rFact = new RankerFactory();
 	protected MetricScorerFactory mFact = new MetricScorerFactory();
 	//rType2[rankerType], trainMetric, testMetric
-	public static Evaluator e;
-	public static Ranker ranker;
-	public static int[] features;
+	public  Evaluator e;
+	public  Ranker ranker;
+	public  int[] features;
 	
-	
-	public static void test_rank() throws IOException{
-		Search.initialize();
+	public void initialize(){
 		
-		String modelFile = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\mymodel-50.txt";
-		String[] rType = new String[]{"MART", "RankNet", "RankBoost", "AdaRank", "Coordinate Ascent", "LambdaRank", "LambdaMART", "ListNet", "Random Forests", "Linear Regression"};
-		RANKER_TYPE[] rType2 = new RANKER_TYPE[]{RANKER_TYPE.MART, RANKER_TYPE.RANKNET, RANKER_TYPE.RANKBOOST, RANKER_TYPE.ADARANK, RANKER_TYPE.COOR_ASCENT, RANKER_TYPE.LAMBDARANK, RANKER_TYPE.LAMBDAMART, RANKER_TYPE.LISTNET, RANKER_TYPE.RANDOM_FOREST, RANKER_TYPE.LINEAR_REGRESSION};
-		int rankerType = 6;
-		String trainMetric = "NDCG@20";
-		String testMetric = "MAP";
-		e = new Evaluator(rType2[rankerType], trainMetric, testMetric);
-		ranker = rFact.loadRankerFromFile(modelFile);
-		features = ranker.getFeatures();
-		System.out.println("Model loaded");
-		
-		ArrayList<Integer> queryNums = new ArrayList<Integer>();
-		ArrayList<String> querys = new ArrayList<String>();
-		Test.loadTestQuerys(queryNums, querys);
-		System.out.println("Querys loaded");
-		
-		for (int qi=80; qi<100; qi++){
-			long t1 = new Date().getTime();
-			ArrayList<DocScoreList> scores = Search.SearchFor(querys.get(qi));
-			scores = Rank.rank(scores);
-			long t2 = new Date().getTime();
-			rank(queryNums.get(qi), scores);
-			long t3 = new Date().getTime();
-			long delta1 = t2-t1;
-			long delta2 = t3 - t2;
-			System.out.println(String.join("-", t1+"", t1+"", t3+""));
-			System.out.println(delta1 + "  " + delta2);
-		}
 	}
 	
-	
-	public static void writeFeatures(int queryID, ArrayList<DocScoreList> scores, String featureFileName) throws IOException{
+	public void writeFeatures(int queryID, ArrayList<DocScoreList> scores, String featureFileName) throws IOException{
 		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(featureFileName)); // set FileWriter(fname, true) means append contents.
 		
 		int n = scores.size();
@@ -101,8 +71,9 @@ public class TrainLambdaMART {
 		bufWriter.close();
 	}
 	
-	public static void genTrainingData() throws NumberFormatException, IOException{
-		Search.initialize();
+	public void genTrainingData() throws NumberFormatException, IOException{
+		Search S = new Search();
+		S.initialize();
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
 		Test.loadTestQuerys(queryNums, querys);
@@ -116,8 +87,7 @@ public class TrainLambdaMART {
 		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fname)); // set FileWriter(fname, true) means append contents.
 		
 		for (int qi=0; qi<80; qi++){
-			ArrayList<DocScoreList> scores = Search.SearchFor(querys.get(qi));
-			scores = Rank.rank(scores);
+			ArrayList<DocScoreList> scores = S.SearchFor(querys.get(qi));
 			HashMap<String, Integer> queryTruth = truth.get(queryNums.get(qi));
 			
 			int n = scores.size();
@@ -154,7 +124,7 @@ public class TrainLambdaMART {
 	 * @throws NumberFormatException
 	 * @throws IOException
 	 */
-	public static void loadQueryGroundTruth(String fname, HashMap<Integer, HashMap<String, Integer>> truth) throws NumberFormatException, IOException{
+	public void loadQueryGroundTruth(String fname, HashMap<Integer, HashMap<String, Integer>> truth) throws NumberFormatException, IOException{
 		BufferedReader bufReader = new BufferedReader(new FileReader(fname));
 		String line;
 		while((line = bufReader.readLine()) != null){
@@ -174,63 +144,7 @@ public class TrainLambdaMART {
 	}
 	
 
-	public static void rank(int queryID, ArrayList<DocScoreList> scores) throws IOException{
-		String indriRanking = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\ranks_one_query.txt" + queryID;
-		
-		double[] newScores = new double[scores.size()];
-		RankList l = toRankList(queryID, scores);
-		int[] rankIndex = rank(l, newScores);
-		writeRankResult(l, indriRanking, newScores, rankIndex);
-		
-	}
 	
-	public static int[] rank(RankList l, double[] scores){
-		//double[] scores = new double[l.size()];
-		for (int j = 0; j < l.size(); j++)
-			scores[j] = ranker.eval(l.get(j));
-		int[] rankIndex = MergeSorter.sort(scores, false);
-		return rankIndex;
-	}
-	
-	public static void writeRankResult(RankList l, String outputFileName, double[] scores, int[] idx){
-		try {
-			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFileName), "UTF-8"));
-			
-			for (int j = 0; j < idx.length; j++) {
-				int k = idx[j];
-				String str = l.getID() + " Q0 " + l.get(k).getDescription().replace("#", "").trim() + " " + (j + 1) + " " + SimpleMath.round(scores[k], 5) + " indri";
-				out.write(str);
-				out.newLine();
-			}
-			out.close();
-		}
-		catch(IOException ex)
-		{
-			throw RankLibError.create("Error in writeRankResult: ", ex);
-		}
-	}
-	
-	public static RankList toRankList(int queryID, ArrayList<DocScoreList> scores){
-		List<DataPoint> rl = new ArrayList<DataPoint>();
-		for (DocScoreList score: scores){
-			DataPoint qp = toDataPoint(queryID, score);
-			rl.add(qp);
-		}
-		return new RankList(rl);
-	}
-	
-	
-	public static DataPoint toDataPoint(int queryID, DocScoreList score){
-		int featureNumber = score.scores.size();
-		float[] fVals = new float[featureNumber+1];
-		int i = 1;
-		for (Double s: score.scores){
-			fVals[i] = s.floatValue();
-			i ++;
-		}
-		return new DenseDataPoint(fVals, featureNumber, queryID, 0, score.docno);
-		
-	}
 	
 	
 	
