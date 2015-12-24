@@ -1,9 +1,11 @@
 package retrieve;
 
+import index.domain.Dictionary;
 import index.domain.Document;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -13,17 +15,22 @@ import java.util.Date;
 
 import ciir.umass.edu.eval.Evaluator;
 import ciir.umass.edu.learning.RANKER_TYPE;
+import retrieve.util.DocInfo;
 import retrieve.util.DocScore;
 import retrieve.util.DocScoreList;
 
 public class Test {
+	public static String indexPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\data\\index\\";
+	
 	
 	public static void main(String[] args) throws IOException{
 		testLearnRank();
 	}
 	
+	
+	
 	public static void testSearchAllQueries() throws IOException{
-		Search s = new Search();
+		Search s = new Search(indexPath);
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
 		loadTestQuerys(queryNums, querys);
@@ -58,7 +65,7 @@ public class Test {
 	}
 	
 	public static void testSearch() throws IOException{
-		Search S = new Search();
+		Search S = new Search(indexPath);
 		ArrayList<DocScoreList> docs = S.SearchFor("Algorithm Design");
 		for (int i=0; i<10; i++){
 			DocScoreList doc = docs.get(i);
@@ -73,7 +80,7 @@ public class Test {
 	}
 	
 	public static void testLearnRank() throws IOException{
-		Search s = new Search();
+		Search s = new Search(indexPath);
 		
 		LearnRank R = new LearnRank();
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
@@ -86,7 +93,7 @@ public class Test {
 			ArrayList<DocScoreList> scores = s.SearchFor(querys.get(qi));
 			
 			long t2 = new Date().getTime();
-			R.rank(queryNums.get(qi), scores);
+			String[] docsNo = R.rank(queryNums.get(qi), scores); // docNo sort by rank score
 			long t3 = new Date().getTime();
 			long delta1 = t2-t1;
 			long delta2 = t3 - t2;

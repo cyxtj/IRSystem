@@ -1,4 +1,4 @@
-package retrieve;
+package setup;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -12,6 +12,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import retrieve.Search;
+import retrieve.Test;
 import retrieve.util.DocInfo;
 import retrieve.util.DocScoreList;
 import ciir.umass.edu.eval.Evaluator;
@@ -28,25 +30,24 @@ import ciir.umass.edu.utilities.SimpleMath;
 
 /**
  * @author Cao Yixuan
- * 
- * This class provide a interface to RankLib package to train the model without cmd.
- * Not Finished!!!
- * Maybe use cmd-line at present.
- * e.score(savedModelFile, rankFile, scoreFile); in Evaluator.java can be used to rank a file give a model
+ * generate train file
  */
 public class TrainLambdaMART {
+	public static String projectPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\";
+	public static String dataPath = projectPath + "\\data\\";
+	public static String indexPath = dataPath + "\\index\\";
 	
-	public static void main(String[] args) throws NumberFormatException, IOException{
-		// genTrainingData();
-		TrainLambdaMART T = new TrainLambdaMART();
-		//T.test_rank();
-	}
 	protected static RankerFactory rFact = new RankerFactory();
 	protected MetricScorerFactory mFact = new MetricScorerFactory();
 	//rType2[rankerType], trainMetric, testMetric
 	public  Evaluator e;
 	public  Ranker ranker;
 	public  int[] features;
+	
+	public static void main(String[] args) throws NumberFormatException, IOException{
+		genTrainingData();
+		//T.test_rank();
+	}
 	
 	public void initialize(){
 		
@@ -71,20 +72,20 @@ public class TrainLambdaMART {
 		bufWriter.close();
 	}
 	
-	public void genTrainingData() throws NumberFormatException, IOException{
-		Search S = new Search();
+	public static void genTrainingData() throws NumberFormatException, IOException{
+		Search S = new Search(indexPath);
 		S.initialize();
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
 		Test.loadTestQuerys(queryNums, querys);
 		
 		// truth : { queryId: {doc1No: rel, doc2No: rel, ...}, ...}
-		String truth_fname = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\WT10G\\qrels.trec9_10";
+		String truth_fname = dataPath+"/WT10G/qrels.trec9_10";
 		HashMap<Integer, HashMap<String, Integer>> truth = new HashMap<Integer, HashMap<String, Integer>>();
 		loadQueryGroundTruth(truth_fname, truth);
 		
-		String fname = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\features.txt";
-		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fname)); // set FileWriter(fname, true) means append contents.
+		String featureFileName = projectPath+"/RankLib/features.txt";
+		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(featureFileName)); // set FileWriter(fname, true) means append contents.
 		
 		for (int qi=0; qi<80; qi++){
 			ArrayList<DocScoreList> scores = S.SearchFor(querys.get(qi));
@@ -124,7 +125,7 @@ public class TrainLambdaMART {
 	 * @throws NumberFormatException
 	 * @throws IOException
 	 */
-	public void loadQueryGroundTruth(String fname, HashMap<Integer, HashMap<String, Integer>> truth) throws NumberFormatException, IOException{
+	public static void loadQueryGroundTruth(String fname, HashMap<Integer, HashMap<String, Integer>> truth) throws NumberFormatException, IOException{
 		BufferedReader bufReader = new BufferedReader(new FileReader(fname));
 		String line;
 		while((line = bufReader.readLine()) != null){

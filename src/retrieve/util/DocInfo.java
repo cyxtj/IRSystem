@@ -1,9 +1,12 @@
 package retrieve.util;
 
 import index.domain.Dictionary;
+import index.domain.Document;
 import index.domain.MyInteger;
 import index.domain.PostingItem;
 import index.domain.PostingList;
+import index.domain.Token;
+import index.util.Tokenizer;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -13,6 +16,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import common.MyMath;
@@ -35,7 +40,8 @@ public class DocInfo {
 	
 	
 	public static void main(String[] args) throws IOException{
-		test_loadDocTfIdfVectorLengths();
+		String fname = "";
+		test_loadDocTfIdfVectorLengths(fname);
 	}
 	
 	/**
@@ -45,20 +51,20 @@ public class DocInfo {
 	 * @param fname
 	 * @throws IOException
 	 */
-	public static void writeDocTfIdfVectorLength(Dictionary dic, double N, String fname) throws IOException{
-		ArrayList<Double> docWeightLengths = computeDocTfIdfVectorLengths(dic, N);
+	public static void writeDocTfIdfVectorLength(Dictionary dic, int N, String fname) throws IOException{
+		double[] docWeightLengths = computeDocTfIdfVectorLengths(dic, N);
 		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fname));
 		// TODO 
 		for(int i=0; i<N; i++){
-			String entryStr = String.format("%.5f\n", docWeightLengths.get(i));
+			String entryStr = String.format("%.5f\n", docWeightLengths[i]);
 			bufWriter.write(entryStr);
 		}
 		bufWriter.close();
 	}
 	
 	
-	public static void test_loadDocTfIdfVectorLengths() throws IOException{
-		ArrayList<Double> dwl = loadDocTfIdfVectorLengths("i:\\kuaipan\\graduateCourses\\IR\\program\\Search\\WT10G\\docWeightLength.txt");
+	public static void test_loadDocTfIdfVectorLengths(String fname) throws IOException{
+		ArrayList<Double> dwl = loadDocTfIdfVectorLengths(fname);
 		System.out.print(dwl.get(100));
 	}
 	/**
@@ -67,7 +73,7 @@ public class DocInfo {
 	 * @param N
 	 * @return
 	 */
-	public static ArrayList<Double> computeDocTfIdfVectorLengths(Dictionary dic, double N){
+	public static double[] computeDocTfIdfVectorLengths(Dictionary dic, int N){
 		HashMap<Integer, ArrayList<Double>> docVectors = new HashMap<Integer, ArrayList<Double>>();
 		Set<String> termsSet = dic.getKeySet();
 		for (String term: termsSet){
@@ -96,11 +102,67 @@ public class DocInfo {
 		}
 		System.out.println("#doc has tfidf vector"+docWeightLengths.size());
 		*/
-		ArrayList<Double> docVectorLengths = new ArrayList<Double>((int) N); 
+		double[] docVectorLengths = new double[N]; 
 		for (int i=0; i<N; i++){
-			docVectorLengths.set(i, MyMath.euclideanLength(docVectors.get(i)));
+			docVectorLengths[i] =  MyMath.euclideanLength(docVectors.get(i));
 		}
 		return docVectorLengths;
+	}
+	
+	public static void computeWriteDocTfIdfVectorLengths(Dictionary dic, String[] docNoByDocId, int N, String docPath, String fname) throws IOException{
+		// first decode all posting list and get df of term, record that
+		HashMap<String, Integer> termDf = new HashMap<String, Integer>();
+		Set<String> keySet = dic.getKeySet();
+		for (String term: keySet){
+			PostingList pl = dic.getPL(term);
+			pl = PostingList.decode(pl.c_pl, new MyInteger(0));
+			int df = pl.getDF();
+			termDf.put(term, df);
+		}
+		
+		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fname));
+		
+		for(int i=0; i<N; i++){
+			if(i%10000==0) System.out.println(i);
+			Document doc = Document.getDocument(docNoByDocId[i], docPath); //获取第一篇文档
+			double l = docTfIdfVectorLength(doc.content, termDf, N);
+			String entryStr = String.format("%.3f\n", l);
+			bufWriter.write(entryStr);
+		}
+		bufWriter.close();
+	}
+	public static double docTfIdfVectorLength(String content, HashMap<String, Integer> termDf, int N) throws IOException{
+		
+		// get terms and term frequency
+		MyInteger index = new MyInteger(0);
+		Token token;
+		HashMap<String, Integer> termsFreq = new HashMap<String, Integer>();
+		while((token=Tokenizer.nextToken(content, 0, index)) != null){
+			token = token.preprocess();
+			if(token.term.equals("")) continue; //词条，停用词
+			String term = token.term;
+			if(termsFreq.containsKey(term)){
+				termsFreq.replace(term, termsFreq.get(term)+1);
+			}else{
+				termsFreq.put(term, 1);
+			}
+		}
+		
+		// compute length
+		double norm = 0;
+		Set<String> keys = termsFreq.keySet();
+		for(String term: keys){
+			
+			if (!termDf.containsKey(term)){
+				System.out.println(term);
+				continue;
+			}
+			int df = termDf.get(term);
+			int tf = termsFreq.get(term);
+			double tfidf = (1 + Math.log(tf)) * Math.log(N / df); 
+			norm += tfidf * tfidf;
+		}
+		return Math.sqrt(norm);
 	}
 	
 	/**
