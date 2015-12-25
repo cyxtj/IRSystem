@@ -59,6 +59,7 @@ public class Search {
 			token = token.preprocess();
 			if(token.term.equals("")) continue; //词条，停用词
 			String term = token.term;
+			System.out.print(term);
 			if(termFreqDict.containsKey(term)){
 				termFreqDict.replace(term, termFreqDict.get(term)+1);
 			}else{

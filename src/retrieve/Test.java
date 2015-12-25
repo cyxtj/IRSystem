@@ -20,7 +20,13 @@ import retrieve.util.DocScore;
 import retrieve.util.DocScoreList;
 
 public class Test {
-	public static String indexPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\data\\index\\";
+	public static String projectPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\";
+	public static String dataPath = projectPath + "data\\";
+	public static String indexPath = dataPath + "index\\";
+	public static String docPath = dataPath + "WT10G\\WT10G_toy\\";
+	public static String truthFileName= dataPath+"/WT10G/qrels.trec9_10";
+	public static String outputFeaturesFileName = projectPath + "RankLib\\features_all.txt";
+	public static String queryFileName = dataPath + "\\WT10G\\querys.txt";
 	
 	
 	public static void main(String[] args) throws IOException{
@@ -31,9 +37,10 @@ public class Test {
 	
 	public static void testSearchAllQueries() throws IOException{
 		Search s = new Search(indexPath);
+		
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
-		loadTestQuerys(queryNums, querys);
+		loadTestQuerys(queryFileName, queryNums, querys);
 		String fname = "i:\\kuaipan\\graduateCourses\\IR\\program\\test_score2.txt";
 		BufferedWriter bufWriter = new BufferedWriter(new FileWriter(fname)); // set FileWriter(fname, true) means append contents.
 		
@@ -52,9 +59,9 @@ public class Test {
 		bufWriter.close();
 	}
 	
-	public static void loadTestQuerys(ArrayList<Integer> queryNums, ArrayList<String> querys) throws NumberFormatException, IOException{
-		String fname = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\WT10G\\querys.txt";
-		BufferedReader bufReader = new BufferedReader(new FileReader(fname));
+	public static void loadTestQuerys(String queryFileName, ArrayList<Integer> queryNums, ArrayList<String> querys) throws NumberFormatException, IOException{
+		//String fname = "i:\\kuaipan\\graduateCourses\\IR\\program\\data\\WT10G\\querys.txt";
+		BufferedReader bufReader = new BufferedReader(new FileReader(queryFileName));
 		String line;
 		while((line = bufReader.readLine()) != null){
 			queryNums.add(Integer.parseInt(line.substring(0, 3)));
@@ -62,6 +69,7 @@ public class Test {
 			//System.out.println(line);
 		}
 		bufReader.close();
+		System.out.println("query files loaded");
 	}
 	
 	public static void testSearch() throws IOException{
@@ -85,7 +93,7 @@ public class Test {
 		LearnRank R = new LearnRank();
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
-		Test.loadTestQuerys(queryNums, querys);
+		Test.loadTestQuerys(queryFileName, queryNums, querys);
 		System.out.println("Querys loaded");
 		
 		for (int qi=80; qi<100; qi++){

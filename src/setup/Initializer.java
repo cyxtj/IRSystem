@@ -9,11 +9,17 @@ import java.io.IOException;
 import retrieve.util.DocInfo;
 
 public class Initializer {
-	public static String indexPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\data\\index\\";
-	public static String docPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\data\\WT10G\\WT10G_copy\\";
+	public static String projectPath = "i:\\kuaipan\\graduateCourses\\IR\\program\\IR_system\\";
+	public static String dataPath = projectPath + "data\\";
+	public static String indexPath = dataPath + "index\\";
+	public static String docPath = dataPath + "WT10G\\WT10G_toy\\";
+	
 	public static void main(String[] args) throws NumberFormatException, IOException{
-		writeVectorLength();
-		TrainLambdaMART.genTrainingData();
+		//writeVectorLength();
+		String truthFileName= dataPath+"/WT10G/qrels.trec9_10";
+		String outputFeaturesFileName = projectPath + "RankLib\\features_all.txt";
+		String queryFileName = dataPath + "\\WT10G\\querys.txt";
+		TrainLambdaMART.genTrainingData(indexPath, truthFileName, queryFileName, outputFeaturesFileName);
 	}
 	public static void writeVectorLength() throws IOException{
 		String[] docNoByDocId = Document.loadDocNoByDocId(new File(indexPath + "/docNoByDocId"));
@@ -22,7 +28,7 @@ public class Initializer {
 		Dictionary contentDic = Dictionary.load(
 					new File(indexPath + "/dictionary"), 
 					new File(indexPath + "/postinglist"));
-		System.out.println("loaded");
+		System.out.println("content dictionary loaded");
 		DocInfo.computeWriteDocTfIdfVectorLengths(contentDic, docNoByDocId, N, docPath, indexPath+"/docWeightLength.txt");
 	}
 }

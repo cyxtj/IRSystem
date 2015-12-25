@@ -1,6 +1,6 @@
-./bin/*
-./data/*
-./eval/*
-./RankLib/*
+bin/*
+data/*
+eval/*
+RankLib/*
 *.swp
 *.np*
