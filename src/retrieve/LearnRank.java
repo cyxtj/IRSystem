@@ -21,18 +21,17 @@ public class LearnRank {
 	public Ranker ranker;
 	protected static RankerFactory rFact = new RankerFactory();
 	
-	public LearnRank(){
-		initialize();
+	public LearnRank(String modelFile){
+		initialize(modelFile);
 	}
 	
-	public void initialize(){
-		String modelFile = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\mymodel-50.txt";
+	public void initialize(String modelFile){
+		
 		ranker = rFact.loadRankerFromFile(modelFile);
 		System.out.println("Model loaded");
 	}
 	
-	public String[] rank(int queryID, ArrayList<DocScoreList> docFeatures) throws IOException{
-		String resultFileName = "i:\\kuaipan\\graduateCourses\\IR\\program\\RankLib\\ranks_one_query.txt" + queryID;
+	public String[] rank(int queryID, ArrayList<DocScoreList> docFeatures, String resultFileName) throws IOException{
 		
 		double[] newScores = new double[docFeatures.size()];
 		RankList l = toRankList(queryID, docFeatures);
@@ -41,7 +40,9 @@ public class LearnRank {
 		for (int i=0; i<rankIndex.length; i++){
 			docsNo[i] = l.get(rankIndex[i]).getDescription();
 		}
-		writeRankResult(l, resultFileName, newScores, rankIndex);
+		if (resultFileName!=null){
+			writeRankResult(l, resultFileName, newScores, rankIndex);
+		}
 		return docsNo;
 	}
 	

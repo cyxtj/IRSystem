@@ -88,24 +88,34 @@ public class Test {
 	}
 	
 	public static void testLearnRank() throws IOException{
-		Search s = new Search(indexPath);
+		Search S = new Search(indexPath);
 		
-		LearnRank R = new LearnRank();
+		String modelFile = projectPath + "\\RankLib\\MART.model";
+		LearnRank R = new LearnRank(modelFile);
 		ArrayList<Integer> queryNums = new ArrayList<Integer>();
 		ArrayList<String> querys = new ArrayList<String>();
 		Test.loadTestQuerys(queryFileName, queryNums, querys);
 		System.out.println("Querys loaded");
 		
+		
 		for (int qi=80; qi<100; qi++){
 			long t1 = new Date().getTime();
-			ArrayList<DocScoreList> scores = s.SearchFor(querys.get(qi));
+			ArrayList<DocScoreList> scores = S.SearchFor(querys.get(qi));
 			
 			long t2 = new Date().getTime();
-			String[] docsNo = R.rank(queryNums.get(qi), scores); // docNo sort by rank score
+			String resultFileName = projectPath + "\\RankLib\\ranks_query" + queryNums.get(qi) + ".txt";
+			String[] docsNo = R.rank(queryNums.get(qi), scores, resultFileName); // docNo sort by rank score
 			long t3 = new Date().getTime();
 			long delta1 = t2-t1;
 			long delta2 = t3 - t2;
-			//System.out.println(String.join("-", t1+"", t1+"", t3+""));
+			
+			int n = Math.min(docsNo.length, 100);
+			ArrayList<Document> documents = new ArrayList<Document>(n);
+			for (int i=0; i<n; i++){
+				String docNo = docsNo[i];
+				Document d = Document.getDocument(docNo, docPath); //d.content, d.title, d.webpage, d.docno, ...
+				documents.set(i, d); 
+			}
 			System.out.println(delta1 + "  " + delta2);
 		}
 	}

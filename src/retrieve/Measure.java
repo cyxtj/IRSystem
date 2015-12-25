@@ -61,16 +61,16 @@ public class Measure {
 	}
 	
 	
-	public ArrayList<DocScoreList> computeScores(ArrayList<TermFreq> queryTermsFreq, ArrayList<PostingList> contentPLs, ArrayList<PostingList> titlePLs){
+	public ArrayList<DocScoreList> computeScores(ArrayList<PostingList> contentPLs, ArrayList<TermFreq> queryTermsFreqContent, ArrayList<PostingList> titlePLs, ArrayList<TermFreq> queryTermsFreqTitle){
 		HashMap<Integer, Double> contentBM25 = new HashMap<Integer, Double>();
 		HashMap<Integer, Double> titleBM25 = new HashMap<Integer, Double>();
-		computeContentBM25(queryTermsFreq, contentPLs, contentBM25);
-		computeTitleBM25(queryTermsFreq, contentPLs, contentBM25);
+		computeContentBM25(queryTermsFreqContent, contentPLs, contentBM25);
+		computeTitleBM25(queryTermsFreqTitle, titlePLs, titleBM25);
 		
 		HashMap<Integer, Double> contentVSM = new HashMap<Integer, Double>();
 		HashMap<Integer, Double> titleVSM = new HashMap<Integer, Double>();
-		computeContentVSM(queryTermsFreq, contentPLs, contentVSM);
-		computeTitleVSM(queryTermsFreq, contentPLs, titleVSM);
+		computeContentVSM(queryTermsFreqContent, contentPLs, contentVSM);
+		computeTitleVSM(queryTermsFreqTitle, titlePLs, titleVSM);
 		
 		HashMap<Integer, Double[]> staticScore = new HashMap<Integer, Double[]>();
 		computeStaticScores(contentPLs, staticScore);
@@ -158,7 +158,7 @@ public class Measure {
 	}
 	
 	public void computeContentBM25(ArrayList<TermFreq> queryTerms, ArrayList<PostingList> PostingLists, HashMap<Integer, Double> docScores){
-		double qtf = 1;
+		//double qtf = 1;
 		
 		// compute scores for each document
 		// outer loop on query terms and inner loop on docids of the corresponding postinglist
@@ -167,6 +167,7 @@ public class Measure {
 		for (int i=0; i<PostingLists.size(); i++){
 			PostingList pl = PostingLists.get(i);
 			int df = pl.getDF();
+			double qtf = queryTerms.get(i).freq;
 			for (int di=0, n=pl.getSize(); di<n; di++){
 				PostingItem postingitem = pl.getItem(di);
 				int tf = postingitem.tf;
@@ -243,20 +244,23 @@ public class Measure {
 	
 
 	public ArrayList<DocScoreList> combineScores(HashMap<Integer, Double> contentBM25, HashMap<Integer, Double> titleBM25, HashMap<Integer, Double> contentVSM, HashMap<Integer, Double> titleVSM, HashMap<Integer, Double[]> staticScore){
-		if (!(contentBM25.size()==contentVSM.size() && contentBM25.size()==staticScore.size())){
-			return null;
-		}
+		
 		ArrayList<DocScoreList> docsScores = new ArrayList<DocScoreList>();
 		
-		Iterator<Entry<Integer, Double>> iter = contentBM25.entrySet().iterator();
+		Iterator<Entry<Integer, Double[]>> iter = staticScore.entrySet().iterator();
 		while (iter.hasNext()) {
-			Map.Entry<Integer, Double> entry = (Map.Entry<Integer, Double>) iter.next();
+			Map.Entry<Integer, Double[]> entry = (Map.Entry<Integer, Double[]>) iter.next();
 			Integer docid = entry.getKey();
-			Double contentBM25Val = entry.getValue();
+			Double[] staticvals = entry.getValue();
+			Double contentBM25Val = contentBM25.get(docid);
 			Double titleBM25Val = titleBM25.get(docid);
 			Double contentVSMVal = contentVSM.get(docid);
 			Double titleVSMVal = titleVSM.get(docid);
-			Double[] staticvals = staticScore.get(docid);
+			
+			if(contentBM25Val==null) contentBM25Val = -1.0;
+			if(titleBM25Val==null) titleBM25Val = -1.0;
+			if(contentVSMVal==null) contentVSMVal = 0.0;
+			if(titleVSMVal==null) titleVSMVal = 0.0;
 			
 			ArrayList<Double> scores = new ArrayList<Double>(6);
 			scores.add(contentBM25Val);
